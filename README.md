@@ -8,10 +8,15 @@ de grafos.
 
 Características
 Grafo de Malla: Genera grafos de malla con dimensiones especificadas.
+
 Modelo Erdős-Rényi: Crea grafos añadiendo aristas entre vértices de manera aleatoria.
+
 Modelo Gilbert: Genera grafos aleatorios donde cada par de nodos se conecta con cierta probabilidad.
+
 Modelo Geográfico: Produce grafos colocando vértices en un cuadrado unitario y conectando pares que se encuentran dentro de una distancia especificada.
+
 Modelo Barabási-Albert: Crea redes libres de escala utilizando un mecanismo de adjunción preferencial.
+
 Modelo Dorogovtsev-Mendes: Genera grafos comenzando con un triángulo y añadiendo nuevos vértices conectados a dos vértices existentes elegidos al azar.
 
 Instalación
