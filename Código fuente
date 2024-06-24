@@ -1,0 +1,523 @@
+import random
+import math
+from collections import deque
+
+
+class Nodo:
+    """
+    Representa un nodo dentro de un grafo.
+    
+    Atributos:
+        id (int o str): Identificador único para el nodo.
+    """
+    def __init__(self, id):
+        """
+        Inicializa un Nodo con un identificador.
+        
+        Parámetros:
+            id (int o str): Identificador del nodo.
+            vecinos Lista: Lista de vecinos.
+        """
+        self.id = id
+        self.vecinos = []  # Lista de nodos vecinos
+
+class Arista:
+    """
+    Representa una arista entre dos nodos en un grafo.
+    
+    Atributos:
+        inicio (Nodo): Nodo de inicio de la arista.
+        fin (Nodo): Nodo final de la arista.
+        peso (float, opcional): Peso de la arista.
+    """
+    def __init__(self, inicio, fin, peso=None):
+        """
+        Inicializa una Arista entre dos nodos.
+        
+        Parámetros:
+            inicio (Nodo): Nodo de inicio de la arista.
+            fin (Nodo): Nodo final de la arista.
+            peso (float, opcional): Peso de la arista. Predeterminado es None.
+        """
+        self.inicio = inicio
+        self.fin = fin
+        self.peso = peso
+
+class Grafo:
+    """
+    Representa un grafo, compuesto por nodos y aristas.
+    
+    Atributos:
+        dirigido (bool): Indica si el grafo es dirigido o no.
+        nodos (dict): Diccionario de nodos en el grafo.
+        aristas (list): Lista de aristas en el grafo.
+    """
+    def __init__(self, dirigido=False):
+        """
+        Inicializa un Grafo.
+        
+        Parámetros:
+            dirigido (bool): Indica si el grafo es dirigido. Predeterminado es False.
+        """
+        self.dirigido = dirigido
+        self.nodos = {}
+        self.aristas = []
+
+    def agregar_nodo(self, id):
+        """
+        Agrega un nodo al grafo con un identificador único.
+        
+        Parámetros:
+            id (int o str): Identificador del nodo a agregar.
+        """
+        if id not in self.nodos:
+            self.nodos[id] = Nodo(id)
+
+    def existe_arista(self, inicio, fin):
+        for arista in self.aristas:
+            if (arista[0] == inicio and arista[1] == fin) or (not self.dirigido and arista[0] == fin and arista[1] == inicio):
+                return True
+        return False
+
+
+    def agregar_arista(self, inicio, fin, peso=None):
+        """
+        Agrega una arista al grafo entre dos nodos existentes.
+        
+        Parámetros:
+            inicio (int o str): Identificador del nodo de inicio de la arista.
+            fin (int o str): Identificador del nodo final de la arista.
+            peso (float, opcional): Peso de la arista. Predeterminado es None.
+        """
+        # Asegurar que ambos nodos existen en el grafo.
+        if inicio in self.nodos and fin in self.nodos:  # Verificar que ambos nodos existan
+          if not self.existe_arista(inicio, fin):  # Asegurar que la arista no exista ya
+                self.nodos[inicio].vecinos.append(self.nodos[fin])  # Ajuste para agregar objetos Nodo
+                self.aristas.append((inicio, fin, peso))  # Asumiendo que el peso se maneja aquí
+                if not self.dirigido:
+                    self.nodos[fin].vecinos.append(self.nodos[inicio])  # Ajuste similar para no dirigidos
+        else:
+            print(f"Uno de los nodos {inicio} o {fin} no existe en el grafo.")
+    
+    def exportar_graphviz(self, nombre_archivo):
+        """
+        Exporta el grafo al formato GraphViz (.dot).
+        
+        Parámetros:
+            nombre_archivo (str): Nombre del archivo de salida sin la extensión.
+        """
+        with open(f"{nombre_archivo}.gv", "w") as archivo:
+            archivo.write("digraph G {\n" if self.dirigido else "graph G {\n")
+            for id_nodo, nodo in self.nodos.items():
+                archivo.write(f'    "{id_nodo}" [label="{id_nodo}"];\n')
+            for arista in self.aristas:
+                archivo.write(f'    "{arista[0]}" {"->" if self.dirigido else "--"} "{arista[1]}";\n')
+            archivo.write("}")
+
+    def BFS(self, s):
+        """
+        Realiza la búsqueda en amplitud (BFS) desde un nodo fuente dado, construyendo
+        y retornando el árbol inducido por el recorrido.
+
+        Args:
+            s: El identificador del nodo fuente desde el cual comenzar el BFS.
+
+        Returns:
+            Grafo: Un nuevo grafo que representa el árbol inducido por el recorrido BFS.
+        """
+        if s not in self.nodos:
+           print(f"El nodo fuente {s} no existe en el grafo.")
+           return Grafo(dirigido=self.dirigido)  # Retorna un nuevo grafo vacío
+
+        visitados = set()
+        cola = deque([s])
+        arbol_bfs = Grafo(dirigido=self.dirigido)
+        arbol_bfs.agregar_nodo(s)
+
+        while cola:
+            nodo_id = cola.popleft()
+            if nodo_id not in visitados:
+                visitados.add(nodo_id)
+                for vecino in self.nodos[nodo_id].vecinos:
+                    vecino_id = vecino.id
+                    if vecino_id not in visitados:
+                        if vecino_id not in arbol_bfs.nodos:
+                            arbol_bfs.agregar_nodo(vecino_id)
+                        arbol_bfs.agregar_arista(nodo_id, vecino_id)
+                        cola.append(vecino_id)
+        return arbol_bfs
+    
+    def DFS_R_util(self, s, visitados, arbol_dfs):
+        """
+        Función auxiliar para DFS_R que realiza el recorrido DFS de manera recursiva.
+        
+        Args:
+            s: Identificador del nodo actual en el recorrido.
+            visitados: Conjunto de nodos ya visitados para evitar ciclos.
+            arbol_dfs: Instancia de Grafo que representa el árbol inducido por DFS.
+        """
+        # Marcar el nodo actual como visitado y agregarlo al árbol DFS.
+        visitados.add(s)
+        arbol_dfs.agregar_nodo(s)
+
+        for vecino in self.nodos[s].vecinos:  # Vecinos como objetos Nodo
+            vecino_id = vecino.id
+            if vecino_id not in visitados:
+                arbol_dfs.agregar_nodo(vecino_id)
+                arbol_dfs.agregar_arista(s, vecino_id)
+                self.DFS_R_util(vecino_id, visitados, arbol_dfs)
+    
+    def DFS_R(self, s):
+        """
+        Realiza un recorrido en profundidad (DFS) de manera recursiva desde un nodo fuente dado,
+        construyendo y retornando el árbol inducido por el recorrido.
+        
+        Args:
+            s: El identificador del nodo fuente desde el cual comenzar el DFS.
+        
+        Returns:
+            Grafo: Un nuevo grafo que representa el árbol inducido por el recorrido DFS.
+        """
+        if s not in self.nodos:
+            print(f"El nodo fuente {s} no existe en el grafo.")
+            return Grafo(dirigido=self.dirigido)
+
+        visitados = set()
+        arbol_dfs = Grafo(dirigido=self.dirigido)
+        self.DFS_R_util(s, visitados, arbol_dfs)
+        return arbol_dfs
+
+    def DFS_I(self, s):
+        """
+        Realiza un recorrido en profundidad (DFS) de manera iterativa desde un nodo fuente dado,
+        construyendo y retornando el árbol inducido por el recorrido.
+
+        Args:
+            s: El identificador del nodo fuente desde el cual comenzar el DFS.
+
+        Returns:
+            Grafo: Un nuevo grafo que representa el árbol inducido por el recorrido DFS.
+        """
+        if s not in self.nodos:
+          print(f"El nodo fuente {s} no existe en el grafo.")
+          return Grafo(dirigido=self.dirigido)
+
+        visitados = set()
+        pila = [s]
+        arbol_dfs_i = Grafo(dirigido=self.dirigido)
+        arbol_dfs_i.agregar_nodo(s)
+
+        while pila:
+            nodo_id = pila.pop()
+            if nodo_id not in visitados:
+                visitados.add(nodo_id)
+                # Agregar vecinos a la pila en orden inverso para mantener consistencia con DFS_R
+                for vecino in reversed(self.nodos[nodo_id].vecinos):
+                    vecino_id = vecino.id
+                    if vecino_id not in visitados:
+                        pila.append(vecino_id)
+                        if vecino_id not in arbol_dfs_i.nodos:
+                            arbol_dfs_i.agregar_nodo(vecino_id)
+                        arbol_dfs_i.agregar_arista(nodo_id, vecino_id)
+        return arbol_dfs_i
+
+
+
+def grafoMalla(m, n, dirigido=False):
+    """
+    Genera un grafo de malla de dimensiones m x n.
+    
+    Parámetros:
+        m (int): Número de filas (> 1) de la malla.
+        n (int): Número de columnas (> 1) de la malla.
+        dirigido (bool): Si el grafo es dirigido. Predeterminado es False.
+        
+    Retorna:
+        Grafo: Una instancia del grafo generado.
+    """
+    grafo = Grafo(dirigido=dirigido)
+    
+    # Crear m * n nodos con identificadores basados en su posición i, j
+    for i in range(m):
+        for j in range(n):
+            id_nodo = f"{i},{j}"
+            grafo.agregar_nodo(id_nodo)
+    
+    # Conectar cada nodo con sus vecinos a la derecha y abajo, si existen
+    for i in range(m):
+        for j in range(n):
+            if i < m - 1:  # Si no es la última fila, conectar hacia abajo
+                grafo.agregar_arista(f"{i},{j}", f"{i + 1},{j}")
+            if j < n - 1:  # Si no es la última columna, conectar hacia la derecha
+                grafo.agregar_arista(f"{i},{j}", f"{i},{j + 1}")
+    
+    return grafo
+
+malla_grafo30 = grafoMalla(5, 6, dirigido=False)
+malla_grafo30.exportar_graphviz("malla_grafo30")
+malla_grafo100 = grafoMalla(10, 10, dirigido=False)
+malla_grafo100.exportar_graphviz("malla_grafo100")
+malla_grafo500 = grafoMalla(20, 25, dirigido=False)
+malla_grafo500.exportar_graphviz("malla_grafo500")
+
+import random
+
+def grafoErdosRenyi(n, m, dirigido=False):
+    """
+    Genera un grafo aleatorio según el modelo Erdős-Rényi para grafos no dirigidos.
+
+    Parámetros:
+        n (int): Número de nodos.
+        m (int): Número de aristas a añadir.
+        dirigido (bool): Este parámetro se ignora ya que el enfoque es para grafos no dirigidos.
+    """
+    grafo = Grafo(dirigido=False)  
+
+    # Crear n nodos
+    for i in range(n):
+        grafo.agregar_nodo(str(i))
+
+    # Generar todas las aristas posibles 
+    todas_las_aristas_posibles = [(str(i), str(j)) for i in range(n) for j in range(i+1, n)]
+
+    # Elegir m aristas al azar sin repetición, asegurándose de no exceder el número total de aristas posibles
+    m = min(m, len(todas_las_aristas_posibles))
+    aristas_seleccionadas = random.sample(todas_las_aristas_posibles, m)
+
+    # Añadir las aristas seleccionadas al grafo
+    for inicio, fin in aristas_seleccionadas:
+        grafo.agregar_arista(inicio, fin)
+
+    return grafo
+
+# Ejemplo de uso
+ER_grafo30 = grafoErdosRenyi(30, 50)
+ER_grafo30.exportar_graphviz("ER_grafo30")
+ER_grafo100 = grafoErdosRenyi(100, 200)
+ER_grafo100.exportar_graphviz("ER_grafo100")
+ER_grafo500 = grafoErdosRenyi(500, 1000)
+ER_grafo500.exportar_graphviz("ER_grafo500")
+
+
+
+import random
+
+def grafoGilbert(n, p, dirigido=False):
+    """
+    Genera un grafo aleatorio según el modelo Gilbert, específicamente para grafos no dirigidos.
+    
+    Parámetros:
+        n (int): Número de nodos.
+        p (float): Probabilidad de crear una arista entre cada par de nodos.
+        dirigido (bool): Este parámetro se ignora ya que el enfoque es para grafos no dirigidos.
+    
+    Retorna:
+        Grafo: Un grafo generado según el modelo Gilbert.
+    """
+    grafo = Grafo(dirigido=False)  # Forzamos el grafo a ser no dirigido
+    
+    for i in range(n):
+        grafo.agregar_nodo(str(i))
+    
+    for i in range(n):
+        for j in range(i+1, n):  # Asegura que cada par se considera solo una vez
+            if random.random() < p:
+                grafo.agregar_arista(str(i), str(j))
+    
+    return grafo
+
+# Ejemplos de uso
+Gilbert_grafo30 = grafoGilbert(30, 0.3)
+Gilbert_grafo30.exportar_graphviz("Gilbert_grafo30")
+Gilbert_grafo100 = grafoGilbert(100, 0.1)
+Gilbert_grafo100.exportar_graphviz("Gilbert_grafo100")
+Gilbert_grafo500 = grafoGilbert(500, 0.05)
+Gilbert_grafo500.exportar_graphviz("Gilbert_grafo500")
+
+import random
+import math
+
+def grafoGeografico(n, r, dirigido=False):
+    """
+    Genera un grafo aleatorio con el modelo geográfico simple.
+    
+    Parámetros:
+        n (int): Número de nodos.
+        r (float): Distancia máxima para conectar dos nodos.
+        dirigido (bool): Indica si el grafo es dirigido. Predeterminado es False.
+    
+    Retorna:
+        Grafo: Un grafo generado según el modelo geográfico simple.
+    """
+    grafo = Grafo(dirigido=dirigido)
+    posiciones = {}
+    
+    # Generar n nodos colocados uniformemente en el plano [0, 1] x [0, 1]
+    for i in range(n):
+        id_nodo = str(i)
+        grafo.agregar_nodo(id_nodo)
+        posiciones[id_nodo] = (random.random(), random.random())
+    
+    for i in range(n):
+        for j in range(i+1, n):
+            nodo_i, nodo_j = str(i), str(j)
+            distancia = math.sqrt((posiciones[nodo_i][0] - posiciones[nodo_j][0])**2 + (posiciones[nodo_i][1] - posiciones[nodo_j][1])**2)
+            if distancia <= r:
+                grafo.agregar_arista(nodo_i, nodo_j)
+                if dirigido:
+                    # Para grafos dirigidos, consideramos la dirección de la arista,
+                    # pero evitamos añadir automáticamente la conexión inversa como parte de la misma operación
+                    continue
+    
+    return grafo
+
+
+geografico_grafo30 = grafoGeografico(30, 0.5, dirigido=False)
+geografico_grafo30.exportar_graphviz("geografico_grafo30")
+geografico_grafo100 = grafoGeografico(100, 0.5, dirigido=False)
+geografico_grafo100.exportar_graphviz("geografico_grafo100")
+geografico_grafo500 = grafoGeografico(500, 0.3, dirigido=False)
+geografico_grafo500.exportar_graphviz("geografico_grafo500")
+
+def grafoBarabasiAlbert(n, d, dirigido=False):
+    """
+    Genera un grafo aleatorio siguiendo una variante del modelo de Barabasi-Albert,
+    la cual favorece conexiones con los nodos más recientes para evitar la formación de bucles.
+    Cada nuevo nodo se conecta a 'd' nodos existentes sin conectarse a sí mismo.
+
+    Parámetros:
+        n (int): Número total de nodos, mayor a 'd'.
+        d (int): Número de aristas para adjuntar desde cada nuevo nodo a nodos existentes.
+        dirigido (bool): Indica si el grafo es dirigido. Predeterminado es False.
+
+    Retorna:
+        Grafo: Un grafo generado según la variante especificada del modelo Barabasi-Albert.
+    """
+    if n <= d:
+        raise ValueError("El número total de nodos 'n' debe ser mayor que 'd'.")
+
+    grafo = Grafo(dirigido=dirigido)
+
+    # Crear los primeros 'd' nodos y conectarlos de manera que se forme una red interconectada.
+    for i in range(d):
+        grafo.agregar_nodo(str(i))
+    for i in range(d):
+        for j in range(i+1, d):
+            grafo.agregar_arista(str(i), str(j))
+            if not dirigido:
+                grafo.agregar_arista(str(j), str(i))
+
+    # Añadir los nodos restantes, conectando cada uno a 'd' nodos recientes.
+    for i in range(d, n):
+        grafo.agregar_nodo(str(i))
+        nodos_recientes = list(grafo.nodos.keys())[-d-1:-1]  # Últimos 'd' nodos, excluyendo el actual
+        for nodo_id in nodos_recientes:
+            grafo.agregar_arista(str(i), nodo_id)
+
+    return grafo
+
+
+
+
+
+# Generar y exportar el grafo
+BA_grafo30 = grafoBarabasiAlbert(30, 3, dirigido=False)
+BA_grafo30.exportar_graphviz("BA_grafo30")
+BA_grafo100 = grafoBarabasiAlbert(100, 3, dirigido=False)
+BA_grafo100.exportar_graphviz("BA_grafo100")
+BA_grafo500 = grafoBarabasiAlbert(500, 3, dirigido=False)
+BA_grafo500.exportar_graphviz("BA_grafo500")
+
+
+def grafoDorogovtsevMendes(n, dirigido=False):
+    """
+    Genera un grafo aleatorio con el modelo Dorogovtsev-Mendes.
+    
+    Parámetros:
+        n (int): Número total de nodos (≥ 3).
+        dirigido (bool): Indica si el grafo es dirigido. Predeterminado es False.
+    
+    Retorna:
+        Grafo: Un grafo generado según el modelo Dorogovtsev-Mendes.
+    """
+    if n < 3:
+        raise ValueError("El número de nodos debe ser al menos 3.")
+    
+    grafo = Grafo(dirigido=dirigido)
+    
+    # Crear un triángulo inicial
+    for i in range(3):
+        grafo.agregar_nodo(str(i))
+    grafo.agregar_arista("0", "1")
+    grafo.agregar_arista("1", "2")
+    grafo.agregar_arista("2", "0")
+    
+    # Añadir nuevos nodos, cada uno conectado a los dos nodos de una arista elegida al azar
+    for i in range(3, n):
+        grafo.agregar_nodo(str(i))
+        arista_seleccionada = random.choice(grafo.aristas)
+        grafo.agregar_arista(str(i), arista_seleccionada[0])
+        grafo.agregar_arista(str(i), arista_seleccionada[1])
+    
+    return grafo
+
+# Generar y exportar el grafo
+DM_grafo30 = grafoDorogovtsevMendes(30, dirigido=False)
+DM_grafo30.exportar_graphviz("DM_grafo30")
+DM_grafo100 = grafoDorogovtsevMendes(100, dirigido=False)
+DM_grafo100.exportar_graphviz("DM_grafo100")
+DM_grafo500 = grafoDorogovtsevMendes(500, dirigido=False)
+DM_grafo500.exportar_graphviz("DM_grafo500")
+
+
+
+def leer_grafo_desde_gv(nombre_archivo):
+    grafo = Grafo()
+    with open(nombre_archivo, 'r') as archivo:
+        for linea in archivo:
+            if '->' in linea or '--' in linea:  
+                partes = linea.strip().replace(';', '').split('->' if '->' in linea else '--')
+                inicio, fin = partes[0].strip('" '), partes[1].strip('" ')
+                grafo.agregar_nodo(inicio)
+                grafo.agregar_nodo(fin)
+                grafo.agregar_arista(inicio, fin)
+    return grafo
+
+nombres_grafos = [
+                #   "malla_grafo30", 
+                #   "malla_grafo100", 
+                #   "malla_grafo500", 
+                #   "ER_grafo30", 
+                #   "ER_grafo100", 
+                #   "ER_grafo500", 
+                #   "Gilbert_grafo30", 
+                #   "Gilbert_grafo100", 
+                #   "Gilbert_grafo500",
+                #   "geografico_grafo30", 
+                  "geografico_grafo100", 
+                  "geografico_grafo500", 
+                #   "BA_grafo30", 
+                #   "BA_grafo100", 
+                #   "BA_grafo500", 
+                #   "DM_grafo30", 
+                #   "DM_grafo100", 
+                #   "DM_grafo500"
+                    ]
+for nombre in nombres_grafos:
+    grafo = leer_grafo_desde_gv(f"{nombre}.gv")
+    nodo_fuente = list(grafo.nodos.keys())[0]  # Tomar el primer nodo como fuente
+    
+    # Aplicar BFS
+    arbol_bfs = grafo.BFS(nodo_fuente)
+    arbol_bfs.exportar_graphviz(f"{nombre}_BFS")
+    
+    # Aplicar DFS Recursivo
+    arbol_dfs_r = grafo.DFS_R(nodo_fuente)
+    arbol_dfs_r.exportar_graphviz(f"{nombre}_DFS_R")
+    
+    # Aplicar DFS Iterativo
+    arbol_dfs_i = grafo.DFS_I(nodo_fuente)
+    arbol_dfs_i.exportar_graphviz(f"{nombre}_DFS_I")
+
+
+    
